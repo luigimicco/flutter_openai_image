@@ -42,3 +42,6 @@ app.*.map.json
 /android/app/debug
 /android/app/profile
 /android/app/release
+
+# to avoid publish my OpenAi key
+lib/openai_key.dart
