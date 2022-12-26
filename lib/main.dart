@@ -20,20 +20,22 @@ class MyApp extends StatelessWidget {
       theme: ThemeData(
         primarySwatch: Colors.blue,
       ),
-      home: OpenAi(),
+      debugShowCheckedModeBanner: false,
+      home: const OpenAiImage(),
     );
   }
 }
 
-class OpenAi extends StatefulWidget {
-  const OpenAi({super.key});
+class OpenAiImage extends StatefulWidget {
+  const OpenAiImage({super.key});
 
   @override
-  State<OpenAi> createState() => _OpenAiState();
+  State<OpenAiImage> createState() => _OpenAiImageState();
 }
 
-class _OpenAiState extends State<OpenAi> {
+class _OpenAiImageState extends State<OpenAiImage> {
   String result = "";
+  bool isLoading = false;
   final textController = TextEditingController();
 
   @override
@@ -46,38 +48,49 @@ class _OpenAiState extends State<OpenAi> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text("Flutter Openai test"),
+        title: const Text("Flutter OpenAi test"),
       ),
       body: Padding(
         padding: const EdgeInsets.all(8.0),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            TextField(
-              controller: textController,
-              decoration: const InputDecoration(
-                border: OutlineInputBorder(),
-                hintText: "put description here",
+        child: SingleChildScrollView(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              TextField(
+                controller: textController,
+                decoration: const InputDecoration(
+                  labelText: 'put description here',
+                  contentPadding: EdgeInsets.all(20),
+                ),
               ),
-            ),
-            ElevatedButton(
-                onPressed: () {
-                  getData(textController.value.toString()).then((value) {
-                    result = json.decode(value.body)['data'][0]['url'];
-                    print(result);
+              ElevatedButton(
+                  onPressed: () {
+                    isLoading = true;
+                    result = "";
                     setState(() {});
-                  });
-                },
-                child: const Text("Genera")),
-            const Spacer(),
-            SafeArea(child: Text(result))
-          ],
+                    getImage(textController.value.toString()).then((value) {
+                      result = json.decode(value.body)['data'][0]['url'];
+                    }).whenComplete(() {
+                      isLoading = false;
+                      setState(() {});
+                    });
+                  },
+                  child: const Text("Genera")),
+              (isLoading)
+                  ? const Padding(
+                      padding: EdgeInsets.all(8.0),
+                      child: CircularProgressIndicator(),
+                    )
+                  : ((result.isNotEmpty) ? imageCard(result) : Container()),
+            ],
+          ),
         ),
       ),
     );
   }
 
-  Future<Response> getData(String description) async {
+  // use OpenAi API to get image
+  Future<Response> getImage(String description) async {
     var endPoint = Uri.https('api.openai.com', '/v1/images/generations');
 
     Map<String, String> headers = {
@@ -88,9 +101,32 @@ class _OpenAiState extends State<OpenAi> {
     final body = json.encode({
       'prompt': description,
       'n': 1,
-      'size': '512x512',
+      'size': '1024x1024',
     });
 
     return http.post(endPoint, headers: headers, body: body);
+  }
+
+  // ImageCard
+  Widget imageCard(imageUrl) {
+    return Padding(
+        padding: const EdgeInsets.all(10.0),
+        child: Card(
+          elevation: 5,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(8),
+          ),
+          child: Padding(
+            padding: const EdgeInsets.all(8.0),
+            child: Container(
+              constraints: const BoxConstraints.expand(height: 300),
+              alignment: Alignment.center,
+              child: (Image.network(
+                imageUrl,
+                fit: BoxFit.cover,
+              )),
+            ),
+          ),
+        ));
   }
 }
